@@ -26,6 +26,7 @@ void processInput(GLFWwindow *window);
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
 unsigned int loadCubemap(vector<std::string> faces);
+unsigned int loadTexture(char const *path);
 
 // settings
 const unsigned int SCR_WIDTH = 800;
@@ -159,15 +160,23 @@ int main() {
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
+    //Face cull
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
+    glFrontFace(GL_CW);
+    //blendinge
+    glEnable(GL_BLEND);
 
     // build and compile shaders
     // -------------------------
     Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
     Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
+    Shader starsShader("resources/shaders/star.vs", "resources/shaders/star.fs");
+
     // load models
     // -----------
-    Model ourModel("resources/objects/backpack/backpack.obj");
-    ourModel.SetShaderTextureNamePrefix("material.");
+    Model bagModel("resources/objects/bag/bag.obj");
+    bagModel.SetShaderTextureNamePrefix("material.");
 
     PointLight& pointLight = programState->pointLight;
     pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
@@ -223,7 +232,23 @@ int main() {
             -1.0f, -1.0f,  1.0f,
             1.0f, -1.0f,  1.0f
     };
+//stars vertices
+    float transparentVertices[] = {
+            // positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
+            0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+            0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
+            1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
 
+            0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+            1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+            1.0f,  0.5f,  0.0f,  1.0f,  0.0f
+    };
+
+    //stars positions
+    vector<float> starsRadius;
+    for(int i =0;i<80;i++){
+        starsRadius.push_back(rand()%10+1);
+    }
     // skybox VAO
     unsigned int skyboxVAO, skyboxVBO;
     glGenVertexArrays(1, &skyboxVAO);
@@ -234,6 +259,20 @@ int main() {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
+    //stars VAO
+    unsigned int transparentVAO, transparentVBO;
+    glGenVertexArrays(1, &transparentVAO);
+    glGenBuffers(1, &transparentVBO);
+    glBindVertexArray(transparentVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), transparentVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glBindVertexArray(0);
+    //Load textures
+    unsigned int starsTexture = loadTexture(FileSystem::getPath("resources/textures/star.png").c_str());
     // load textures for skybox
     vector<std::string> faces =
             {
@@ -291,13 +330,37 @@ int main() {
         ourShader.setMat4("view", view);
 
         // render the loaded model
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model,
-                               programState->backpackPosition); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
-        ourShader.setMat4("model", model);
-        ourModel.Draw(ourShader);
+        //bag
+        glm::mat4 modelBag = glm::mat4(1.0f);
+        modelBag = glm::translate(modelBag,programState->backpackPosition); // translate it down so it's at the center of the scene
+        modelBag = glm::scale(modelBag, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
+        ourShader.setMat4("model", modelBag);
+        bagModel.Draw(ourShader);
 
+        //faceCulling
+        glDisable(GL_CULL_FACE);
+        // stars
+        starsShader.use();
+        glm::mat4 modelstars = glm::mat4(1.0f);
+        starsShader.setMat4("projection", projection);
+        starsShader.setMat4("view", view);
+        glBindVertexArray(transparentVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, starsTexture);
+        for (unsigned int i = 0; i < 80; i++)
+        {
+            modelstars = glm::mat4(1.0f);
+            modelstars = glm::scale(modelstars, glm::vec3(1.5f));
+            modelstars = glm::translate(modelstars, glm::vec3((starsRadius[i]+sin(currentFrame))*cos(currentFrame*starsRadius[i]/20),10.0f,(starsRadius[i]+sin(currentFrame))*sin(currentFrame*starsRadius[i]/21)));
+            modelstars = glm::rotate(modelstars,glm::radians(-90.0f), glm::vec3(1.0f ,0.0f, 0.0f));
+            modelstars = glm::rotate(modelstars,glm::radians(currentFrame*60.0f), glm::vec3(0.0f ,0.0f, 1.0f));
+            modelstars = glm::rotate(modelstars,glm::radians(currentFrame*60.0f), glm::vec3(0.0f ,1.0f, 0.0f));
+
+            starsShader.setMat4("model", modelstars);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+        }
+        //faceCulling
+        glEnable(GL_CULL_FACE);
         //Render skybox
         glDepthFunc(GL_LEQUAL);
         skyboxShader.use();
@@ -458,6 +521,43 @@ unsigned int loadCubemap(vector<std::string> faces)
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return textureID;
+}
+
+unsigned int loadTexture(char const *path)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data)
+    {
+        GLenum format;
+        if (nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else
+    {
+        std::cout << "Texture failed to load at path: " << path << std::endl;
+        stbi_image_free(data);
+    }
 
     return textureID;
 }
