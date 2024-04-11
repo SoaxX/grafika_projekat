@@ -177,6 +177,9 @@ int main() {
     // -----------
     Model bagModel("resources/objects/bag/bag.obj");
     bagModel.SetShaderTextureNamePrefix("material.");
+    //rock
+    Model rockModel("resources/objects/rock/ROCK_01.obj");
+    rockModel.SetShaderTextureNamePrefix("material.");
 
     PointLight& pointLight = programState->pointLight;
     pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
@@ -331,9 +334,15 @@ int main() {
 
         // render the loaded model
         //bag
+        glm::mat4 modelRock = glm::mat4(1.0f);
+        modelRock = glm::translate(modelRock,programState->backpackPosition+glm::vec3(0.0f,-6.0f,0.0f)); // translate it down so it's at the center of the scene
+        modelRock = glm::scale(modelRock, glm::vec3(10.0f));    // it's a bit too big for our scene, so scale it down
+        ourShader.setMat4("model", modelRock);
+        rockModel.Draw(ourShader);
+        //bag
         glm::mat4 modelBag = glm::mat4(1.0f);
-        modelBag = glm::translate(modelBag,programState->backpackPosition); // translate it down so it's at the center of the scene
-        modelBag = glm::scale(modelBag, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
+        modelBag = glm::translate(modelBag,glm::vec3(0.0f)); // translate it down so it's at the center of the scene
+        modelBag = glm::scale(modelBag, glm::vec3(0.1f));    // it's a bit too big for our scene, so scale it down
         ourShader.setMat4("model", modelBag);
         bagModel.Draw(ourShader);
 
@@ -351,7 +360,7 @@ int main() {
         {
             modelstars = glm::mat4(1.0f);
             modelstars = glm::scale(modelstars, glm::vec3(1.5f));
-            modelstars = glm::translate(modelstars, glm::vec3((starsRadius[i]+sin(currentFrame))*cos(currentFrame*starsRadius[i]/20),10.0f,(starsRadius[i]+sin(currentFrame))*sin(currentFrame*starsRadius[i]/21)));
+            modelstars = glm::translate(modelstars, glm::vec3((starsRadius[i]+sin(currentFrame))*cos(currentFrame*starsRadius[i]/20),3.0f,(starsRadius[i]+sin(currentFrame))*sin(currentFrame*starsRadius[i]/21)));
             modelstars = glm::rotate(modelstars,glm::radians(-90.0f), glm::vec3(1.0f ,0.0f, 0.0f));
             modelstars = glm::rotate(modelstars,glm::radians(currentFrame*60.0f), glm::vec3(0.0f ,0.0f, 1.0f));
             modelstars = glm::rotate(modelstars,glm::radians(currentFrame*60.0f), glm::vec3(0.0f ,1.0f, 0.0f));
@@ -460,8 +469,8 @@ void DrawImGui(ProgramState *programState) {
         ImGui::Text("Hello text");
         ImGui::SliderFloat("Float slider", &f, 0.0, 1.0);
         ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
-        ImGui::DragFloat3("Backpack position", (float*)&programState->backpackPosition);
-        ImGui::DragFloat("Backpack scale", &programState->backpackScale, 0.05, 0.1, 4.0);
+        ImGui::DragFloat3("Backpack position", (float*)&programState->backpackPosition, 0.1);
+        ImGui::DragFloat("Backpack scale", &programState->backpackScale, 0.01, 0.01, 400.0);
 
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
