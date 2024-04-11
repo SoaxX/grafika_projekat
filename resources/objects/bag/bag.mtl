@@ -1,0 +1,19 @@
+newmtl blinn1SG
+illum 4
+Kd 0.50 0.50 0.50
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+Ni 1.00
+Ks 0.50 0.50 0.50
+map_Kd REM_TRI_lambert1_BaseColor.jpg
+map_bump REM_TRI_lambert1_Normal.jpg
+map_Ks REM_TRI_lambert1_Metallic.jpg
+newmtl initialShadingGroup
+illum 4
+Kd 0.50 0.50 0.50
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+Ni 1.00
+map_Kd LAST_BAG_LP_bag1_initialShadingGroup1_BaseColor.jpg
+map_bump LAST_BAG_LP_bag1_initialShadingGroup1_Normal.jpg
+map_Ks LAST_BAG_LP_bag1_initialShadingGroup1_Metallic.jpg
